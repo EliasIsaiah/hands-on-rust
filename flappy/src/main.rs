@@ -16,6 +16,8 @@ struct State {
     obstacle: Obstacle,
     mode: GameMode,
     score: i32,
+    walls: Walls,
+
 }
 
 struct Player {
@@ -30,6 +32,24 @@ struct Obstacle {
     size: i32,
 }
 
+struct Walls;
+
+impl Walls {
+    fn new() -> Self {
+        Walls 
+    }
+
+    fn render(&mut self, ctx: &mut BTerm) {
+        for x in 0..SCREEN_WIDTH {
+            ctx.set(x, SCREEN_HEIGHT - 1, RED, BLACK, to_cp437('='));
+        }
+
+        for x in 0..SCREEN_WIDTH {
+            ctx.set(x, 0, RED, BLACK, to_cp437('='));
+        }
+    }
+}
+
 impl State {
     fn new() -> Self {
         State {
@@ -38,6 +58,7 @@ impl State {
             obstacle: Obstacle::new(SCREEN_WIDTH, 0),
             mode: GameMode::Menu,
             score: 0,
+            walls: Walls::new(),
         }
     }
 
@@ -51,6 +72,7 @@ impl State {
         if let Some(VirtualKeyCode::Space) = ctx.key {
             self.player.flap();
         }
+        self.walls.render(ctx);
         self.player.render(ctx);
         ctx.print(0, 0, "Press SPACE to flap.");
         ctx.print(0, 1, &format!("Score: {}", self.score));
@@ -68,7 +90,9 @@ impl State {
     fn restart(&mut self) {
         self.player = Player::new(5, 25);
         self.frame_time = 0.0;
+        self.obstacle = Obstacle::new(SCREEN_WIDTH, 0);
         self.mode = GameMode::Playing;
+        self.score = 0;
     }
 
     fn main_menu(&mut self, ctx: &mut BTerm) {
@@ -88,6 +112,7 @@ impl State {
     fn dead(&mut self, ctx: &mut BTerm) {
         ctx.cls();
         ctx.print_centered(5, "You are dead!");
+        ctx.print_centered(6, &format!("You earned {} points", self.score));
         ctx.print_centered(8, "(P) Play Again");
         ctx.print_centered(9, "(Q) Quit Game");
 
