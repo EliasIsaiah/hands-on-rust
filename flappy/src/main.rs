@@ -17,12 +17,11 @@ struct State {
     mode: GameMode,
     score: i32,
     walls: Walls,
-
 }
 
 struct Player {
-    x: i32,
-    y: i32,
+    x: f32,
+    y: f32,
     velocity: f32,
 }
 
@@ -36,7 +35,7 @@ struct Walls;
 
 impl Walls {
     fn new() -> Self {
-        Walls 
+        Walls
     }
 
     fn render(&mut self, ctx: &mut BTerm) {
@@ -53,7 +52,7 @@ impl Walls {
 impl State {
     fn new() -> Self {
         State {
-            player: Player::new(5, 25),
+            player: Player::new(5.0, 25.0),
             frame_time: 0.0,
             obstacle: Obstacle::new(SCREEN_WIDTH, 0),
             mode: GameMode::Menu,
@@ -78,17 +77,17 @@ impl State {
         ctx.print(0, 1, &format!("Score: {}", self.score));
 
         self.obstacle.render(ctx, self.player.x);
-        if self.player.x > self.obstacle.x {
+        if self.player.x as i32 > self.obstacle.x {
             self.score += 1;
-            self.obstacle = Obstacle::new(self.player.x + SCREEN_WIDTH, self.score);
+            self.obstacle = Obstacle::new(self.player.x as i32 + SCREEN_WIDTH, self.score);
         }
-        if self.player.y > SCREEN_HEIGHT || self.obstacle.hit_obstacle(&self.player) {
+        if self.player.y as i32 > SCREEN_HEIGHT || self.obstacle.hit_obstacle(&self.player) {
             self.mode = GameMode::End;
         }
     }
 
     fn restart(&mut self) {
-        self.player = Player::new(5, 25);
+        self.player = Player::new(5.0, 25.0);
         self.frame_time = 0.0;
         self.obstacle = Obstacle::new(SCREEN_WIDTH, 0);
         self.mode = GameMode::Playing;
@@ -127,7 +126,7 @@ impl State {
 }
 
 impl Player {
-    fn new(x: i32, y: i32) -> Self {
+    fn new(x: f32, y: f32) -> Self {
         Player {
             x,
             y,
@@ -136,17 +135,29 @@ impl Player {
     }
 
     fn render(&mut self, ctx: &mut BTerm) {
-        ctx.set(0, self.y, YELLOW, BLACK, to_cp437('@'));
+        // ctx.set(0, self.y, YELLOW, BLACK, to_cp437('@'));
+        ctx.set_active_console(1);
+        ctx.cls();
+        ctx.set_fancy(
+            PointF { x: 0.0, y: self.y },
+            0,
+            Radians::new(0.0),
+            PointF { x: 4.0, y: 4.0 },
+            YELLOW,
+            BLACK,
+            to_cp437('@'),
+        );
+        ctx.set_active_console(0);
     }
 
     fn gravity_and_move(&mut self) {
         if self.velocity < 2.0 {
             self.velocity += 0.2;
         }
-        self.y += self.velocity as i32;
-        self.x += 1;
-        if self.y < 0 {
-            self.y = 0;
+        self.y += self.velocity;
+        self.x += 1.0;
+        if self.y < 0.0 {
+            self.y = 0.0;
         }
     }
 
@@ -174,8 +185,8 @@ impl Obstacle {
             size: i32::max(2, 20 - score),
         }
     }
-    fn render(&mut self, ctx: &mut BTerm, player_x: i32) {
-        let screen_x = self.x - player_x;
+    fn render(&mut self, ctx: &mut BTerm, player_x: f32) {
+        let screen_x = self.x - player_x as i32;
         let half_size = self.size / 2;
 
         for y in 0..self.gap_y - half_size {
@@ -188,17 +199,20 @@ impl Obstacle {
     }
     fn hit_obstacle(&self, player: &Player) -> bool {
         let half_size = self.size / 2;
-        let does_x_match = player.x == self.x;
-        let player_above_gap = player.y < self.gap_y - half_size;
-        let player_below_gap = player.y > self.gap_y + half_size;
+        let does_x_match = player.x as i32 == self.x;
+        let player_above_gap = player.y < (self.gap_y - half_size) as f32;
+        let player_below_gap = player.y > (self.gap_y + half_size) as f32;
         does_x_match && (player_above_gap || player_below_gap)
     }
 }
 
 fn main() -> BError {
-    let context = BTermBuilder::simple80x50()
-        .with_title("Flappy Dragon")
+    let context = BTermBuilder::new()
+        .with_font("../resources/flappy32.png", 32, 32)
+        .with_simple_console(SCREEN_WIDTH, SCREEN_HEIGHT, "../resources/flappy32.png")
+        .with_fancy_console(SCREEN_WIDTH, SCREEN_HEIGHT, "../resources/flappy32.png")
+        .with_title("Flappy Dragon Enhanced")
+        .with_tile_dimensions(16, 16)
         .build()?;
-
     main_loop(context, State::new())
 }
